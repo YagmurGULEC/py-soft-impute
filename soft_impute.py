@@ -55,15 +55,15 @@ class Impute:
             self.cost.append(self.cost_fun())
         return self
 
-    def predict(self, X, copyto=False):
+    def predict(self,copyto=False):
         return self.X,self.cost
 """
 Fast Iterative Soft-Thresholding Algorithm (FISTA)
 Modification of ISTA to include Nesterov acceleration for faster convergence.
 """
 class FISTA(Impute):
-    def __init__(self):
-        super().__init__(maxit=200)
+    def __init__(self,maxit=200):
+        super().__init__(maxit=maxit)
         self.Z=None
     
     def fit(self,X):
@@ -87,8 +87,8 @@ class FISTA(Impute):
         return self    
 #Alternating directions method of multipliers (ADMM) algorithm
 class ADMM(Impute):
-    def __init__(self):
-        super().__init__(maxit=50)
+    def __init__(self,maxit=50):
+        super().__init__(maxit=maxit)
         self.Z=None
         self.L=None
         self.mu=self.beta
@@ -109,14 +109,15 @@ class ADMM(Impute):
             self.Z=self.SVST(self.X+self.L,self.beta/self.mu)
             self.X=(self.Y+self.mu*(self.Z-self.L))/(self.mu+omega_matrix)
             self.L = self.L + self.X - self.Z
+            self.cost.append(self.cost_fun())
         return self   
 def main():
     clf=ADMM()
     X=np.array([[1,np.nan, 3], [4,5,6],[7, 8,9],[10, 11, 12]])
    
     clf.fit(X)
-    X,cost=clf.predict(X)
-    print (clf.maxit)
+    X,cost=clf.predict()
+    print (cost)
 
 if __name__ == '__main__':
     main()
