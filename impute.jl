@@ -1,3 +1,5 @@
+#https://web.eecs.umich.edu/~fessler/course/551/julia/demo/09_lr_complete3.html
+
 using LinearAlgebra: svd, svdvals, Diagonal, norm
 using MIRTjim: jim
 using Plots; default(markerstrokecolor=:auto)
@@ -57,11 +59,10 @@ function lrmc_admm(Y)
 	for k=1:niter
     	Z = SVST(X + L, beta / mu)
     	X = (Y + mu * (Z - L)) ./ (mu .+ omega)
-        
-    	L = L + X - Z
+        L = L + X - Z
     	cost_admm[k+1] = costfun(X,beta) # comment out to speed-up
 	end
 	return X, cost_admm
 end
-X, cost_ista = lrmc_admm(Y)
+X, cost_ista = lrmc_fista(Y)
 println(X)
