@@ -16,10 +16,13 @@
 from __future__ import print_function
 import numpy as np
 import scipy.linalg as la
-from scipy.linalg import svdvals,norm
+import pandas as pd
+
+
 
 class Impute:
     def __init__(self,thresh=1e-05,beta=0.01, maxit=400, random_state=None, verbose=False):
+        #observed values
         self.omega=None
         self.Y=None
         self.X=None
@@ -27,9 +30,12 @@ class Impute:
         self.maxit = maxit
         self.rs = np.random.RandomState(random_state)
         self.verbose = verbose
+        self.thresh=thresh
+        #convergence rate
+        self.epsilon=[]
+        #cost function
         self.cost=[]
-       
-        
+   
     def SVST(self,X,beta):
         U,s,V=np.linalg.svd(X)
         sthresh=np.maximum(s-beta,0)
@@ -37,26 +43,43 @@ class Impute:
         return B  
          
     def cost_fun(self):
-        nucnorm=np.sum(svdvals(self.X))
-        costfun=0.5*norm(self.X[self.omega]-self.Y[self.omega])**2+self.beta*nucnorm
+        #nuclear norm
+        nucnorm=la.norm(self.X,'nuc')
+        #frobenius norm+nuclear norm
+        costfun=0.5*la.norm(self.X[self.omega]-self.Y[self.omega])**2+self.beta*nucnorm
         return costfun
-    
+
+    def get_residual(self):
+        df=pd.DataFrame(columns=['cost','convergence'])
+        df['cost']=self.cost
+        df['convergence']=self.epsilon
+        return df
+
     def fit(self, X):
         self.omega=np.where(~np.isnan(X))
         self.Y=X.copy()
         self.Y[np.isnan(X)]=0
-        self.X=self.Y.copy()
-     
         iters = 0
-        while iters < self.maxit:
+        Xold=self.Y
+        ratio=1
+    
+        while iters < self.maxit and ratio>self.thresh:
             iters += 1
-            self.X[self.omega]=self.Y[self.omega]
-            self.X=self.SVST(self.X,self.beta)
+            Xnew=self.SVST(Xold,self.beta)
+            ratio=(la.norm(Xnew-Xold)**2/la.norm(Xold)**2)
+            Xold=Xnew
+            self.X=Xold
             self.cost.append(self.cost_fun())
+            self.epsilon.append(ratio)
+        if self.verbose:
+            residual=self.get_residual()
+            print (residual)
         return self
-
-    def predict(self,copyto=False):
-        return self.X,self.cost
+    
+    #return imputed matrix
+    def transform(self):
+        return self.X
+    
 """
 Fast Iterative Soft-Thresholding Algorithm (FISTA)
 Modification of ISTA to include Nesterov acceleration for faster convergence.
@@ -75,6 +98,7 @@ class FISTA(Impute):
         told=1
         Xold=self.Y.copy()
         iters = 0
+        eps=1
         while iters < self.maxit:
             iters += 1
             self.Z[self.omega]=self.Y[self.omega]
@@ -83,6 +107,7 @@ class FISTA(Impute):
             self.Z=self.X+((told-1)/t)*(self.X-Xold)
             Xold=self.X
             told=t
+            
             self.cost.append(self.cost_fun())
         return self    
 #Alternating directions method of multipliers (ADMM) algorithm
@@ -112,12 +137,10 @@ class ADMM(Impute):
             self.cost.append(self.cost_fun())
         return self   
 def main():
-    clf=ADMM()
+    clf=Impute()
     X=np.array([[1,np.nan, 3], [4,5,6],[7, 8,9],[10, 11, 12]])
-   
     clf.fit(X)
-    X,cost=clf.predict()
-    print (cost)
+    Ximputed=clf.transform()
 
 if __name__ == '__main__':
     main()
