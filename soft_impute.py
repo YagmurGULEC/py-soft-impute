@@ -23,9 +23,11 @@ def generate_data(nrows,ncols,percentage):
     ncol=int(ncols)
     nrow=int(nrows)
     data=np.random.randn(nrow,ncol)
+    data_scaled= ((data - data.min()) * (1/(data.max() - data.min()) * 255))
+    
     number_nans=int(ncol*nrow*int(percentage)/100)
-    np.put(data,np.random.choice(data.size,number_nans,replace=False),np.nan)
-    return data
+    np.put(data_scaled,np.random.choice(data.size,number_nans,replace=False),np.nan)
+    return data_scaled
     
 #Base class and ISTA
 class Impute:
@@ -153,6 +155,7 @@ class ADMM(Impute):
             Xold=Xnew
             self.X=Xold
             self.cost.append(self.cost_fun())
+            self.epsilon.append(ratio)
         return self
 
 def main():
