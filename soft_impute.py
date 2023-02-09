@@ -160,11 +160,11 @@ class ADMM(Impute):
 
 def main():
     clf=FISTA(beta=0.01,maxit=50,verbose=True)
-    #X=generate_data(100,10,10)
+    
     X=np.array([[1,np.nan,3],[4,5,6],[7,8,9],[10,11,12]])
     clf.fit(X)
     Ximputed=clf.transform()
-    print (Ximputed)
+
 if __name__ == '__main__':
     main()
 
